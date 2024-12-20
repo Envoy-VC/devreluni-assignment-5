@@ -21,7 +21,7 @@ async fn main() -> eyre::Result<()> {
     let private_key =
         std::env::var("PRIVATE_KEY").map_err(|_| eyre!("No {} env var set", "PRIVATE_KEY"))?;
     let rpc_url = std::env::var("RPC_URL").map_err(|_| eyre!("No {} env var set", "RPC_URL"))?;
-    let contract_address = "0xd92773693917f0ff664f85c3cb698c33420947ff";
+    let contract_address = "0x7e32b54800705876d3b5cfbc7d9c226a211f7c1a";
 
     let signer: PrivateKeySigner = PrivateKeySigner::from_str(&private_key).unwrap();
     let wallet = EthereumWallet::from(signer.clone());
@@ -71,7 +71,6 @@ async fn main() -> eyre::Result<()> {
     println!("After Add Number Count = {:?}", count);
 
     // Increment Number
-
     counter.increment().send().await?.watch().await?;
     count = counter.number().call().await?._0;
     println!("After Increment Count = {:?}", count);

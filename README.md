@@ -89,7 +89,7 @@ You can use the `cargo stylus` command to also deploy your program to the Stylus
 our program compiles to valid WASM for Stylus and will succeed a deployment onchain without transacting. By default, this will use the Stylus testnet public RPC endpoint. See here for [Stylus testnet information](https://docs.arbitrum.io/stylus/reference/testnet-information)
 
 ```bash
-cargo stylus check
+cargo stylus check --no-verify
 ```
 
 If successful, you should see:
@@ -104,9 +104,7 @@ Program succeeded Stylus onchain activation checks with Stylus version: 1
 Next, we can estimate the gas costs to deploy and activate our program before we send our transaction. Check out the [cargo-stylus](https://github.com/OffchainLabs/cargo-stylus) README to see the different wallet options for this step:
 
 ```bash
-cargo stylus deploy \
-  --private-key-path=<PRIVKEY_FILE_PATH> \
-  --estimate-gas
+cargo stylus deploy --private-key=$PRIVATE_KEY --estimate-gas --no-verify
 ```
 
 You will then see the estimated gas cost for deploying before transacting:
@@ -121,8 +119,7 @@ The above only estimates gas for the deployment tx by default. To estimate gas f
 Here's how to deploy:
 
 ```bash
-cargo stylus deploy \
-  --private-key-path=<PRIVKEY_FILE_PATH>
+cargo stylus deploy --private-key=$PRIVATE_KEY --no-verify
 ```
 
 The CLI will send 2 transactions to deploy and activate your program onchain.
@@ -143,36 +140,42 @@ Once both steps are successful, you can interact with your program as you would 
 
 ## Calling Your Program
 
-This template includes an example of how to call and transact with your program in Rust using [ethers-rs](https://github.com/gakonst/ethers-rs) under the `examples/counter.rs`. However, your programs are also Ethereum ABI equivalent if using the Stylus SDK. **They can be called and transacted with using any other Ethereum tooling.**
+This template includes an example of how to call and transact with your program in Rust using [alloy-rs](https://alloy.rs/) under the `examples/counter.rs`. However, your programs are also Ethereum ABI equivalent if using the Stylus SDK. **They can be called and transacted with using any other Ethereum tooling.**
 
 By using the program address from your deployment step above, and your wallet, you can attempt to call the counter program and increase its value in storage:
 
+Make sure that you have your JSON ABI file in the `abi/` directory.
+
 ```rs
-abigen!(
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
     Counter,
-    r#"[
-        function number() external view returns (uint256)
-        function setNumber(uint256 number) external
-        function increment() external
-    ]"#
+    "abi/Counter.json"
 );
-let counter = Counter::new(address, client);
-let num = counter.number().call().await;
-println!("Counter number value = {:?}", num);
 
-let _ = counter.increment().send().await?.await?;
-println!("Successfully incremented counter via a tx");
+let counter = Counter::new(contract_address.parse()?, provider.clone());
+let mut count: U256 = counter.number().call().await?._0;
 
-let num = counter.number().call().await;
-println!("New counter number value = {:?}", num);
+println!("Initial Count = {:?}", count);
+
+// Set Number
+counter
+    .setNumber(U256::from(10))
+    .send()
+    .await?
+    .watch()
+    .await?;
+
+count = counter.number().call().await?._0;
+println!("After Set Number Count = {:?}", count);
 ```
 
 Before running, set the following env vars or place them in a `.env` file (see: [.env.example](./.env.example)) in this project:
 
 ```
 RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
-STYLUS_CONTRACT_ADDRESS=<the onchain address of your deployed program>
-PRIV_KEY_PATH=<the file path for your priv key to transact with>
+PRIVATE_KEY=<your private key>
 ```
 
 Next, run:
